@@ -18,11 +18,18 @@ void eeprom_cs_low(void)
 
 void eeprom_cs_high(void)
 {
-    /* TODO 3.3  Raise CS - but only once the peripheral has completely
-     *           finished transmitting. A received byte does not mean the
-     *           last bits have left the shift register. RM0091 lists the
-     *           status flags to wait for (see its procedure for disabling the
-     *           SPI). Raising CS early cuts the end off a command. */
+    /* RM0091, "Procedure for disabling the SPI": wait for FTLVL empty, then
+     * for BSY to clear. The manual names this exact case, a master providing
+     * the end of the NSS pulse in software. RXNE only says a byte arrived,
+     * not that the last bit has left the shift register. */
+    while ((EE_SPI->SR & SPI_SR_FTLVL) != 0u)
+    {
+    }
+    while ((EE_SPI->SR & SPI_SR_BSY) != 0u)
+    {
+    }
+
+    EE_SPI_GPIO->BSRR = EE_CS_MASK;         /* RM0091 GPIOx_BSRR            */
 }
 
 /* ==========================================================================
@@ -31,20 +38,21 @@ void eeprom_cs_high(void)
 
 uint8_t spi_transfer(uint8_t tx)
 {
-    /* TODO 3.4  Wait until the transmit buffer has room (SPI_SR). */
+    while ((EE_SPI->SR & SPI_SR_TXE) == 0u)
+    {
+    }
 
-    /* TODO 3.5  Write tx to the data register.
-     *           HINT: SPI_DR is declared 16 bits wide in the CMSIS header,
-     *           and on the STM32F0 the WIDTH of the write matters. Count the
-     *           clock pulses per call on your scope: 16 instead of 8 means
-     *           this is the problem. */
+    /* An 8-bit store. A 32- or 16-bit write to DR packs two frames and clocks
+     * 16 bits, which on the scope looks like twice as many pulses per call. */
+    *(volatile uint8_t *)&EE_SPI->DR = tx;
 
-    /* TODO 3.6  Wait for the received byte (SPI_SR), then read it from the
-     *           data register and return it. Read it every time, even when
-     *           you do not need the value. */
+    while ((EE_SPI->SR & SPI_SR_RXNE) == 0u)
+    {
+    }
 
-    (void)tx;
-    return 0u;
+    /* Read every time. A byte left in the receive FIFO shifts the next
+     * transfer's result by one and the driver reads stale data from then on. */
+    return *(volatile uint8_t *)&EE_SPI->DR;
 }
 
 /* ==========================================================================
