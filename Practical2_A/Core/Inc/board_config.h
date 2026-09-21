@@ -29,11 +29,11 @@
  * 1. CLOCK
  * ========================================================================== */
 
-/* TODO 2.1  The kernel clock frequency of the SPI peripheral in THIS build.
- *           Read SystemClock_Config() in main.c, then follow the clock tree in
- *           the RCC chapter of RM0091 to the bus the SPI peripheral sits on.
- *           Do not assume it. */
-#define PCLK1_HZ                0UL         /* <- TODO */
+/* SystemClock_Config() selects HSI with no PLL, AHB /1 and APB1 /1. HSI is the
+ * internal 8 MHz RC oscillator (RM0091 section 7.2.2), so SYSCLK = HCLK =
+ * PCLK1 = 8 MHz. SPI2 is on APB1 (RM0091 Table 1), so this is its kernel
+ * clock. */
+#define PCLK1_HZ                8000000UL
 
 /* ==========================================================================
  * 2. SPI PINS - GIVEN (see README section 5, and verify by continuity)
@@ -45,22 +45,20 @@
 #define EE_PIN_MOSI             15u         /* EEPROM pin 5 (SI)            */
 #define EE_CS_MASK              (1UL << EE_PIN_CS)
 
-/* TODO 2.2  Which SPI peripheral do these pins belong to, and which
- *           alternate-function NUMBER connects it to them? Use the STM32F051
- *           datasheet's alternate-function table for port B, and name that
- *           table in your report. */
-#define EE_SPI                  ((SPI_TypeDef *)0x00000000UL) /* <- TODO    */
-#define EE_SPI_AF               0xFFu       /* <- TODO                      */
+/* STM32F051 datasheet Table 15, alternate functions for port B: PB13 is
+ * SPI2_SCK, PB14 SPI2_MISO and PB15 SPI2_MOSI, all on AF0. The functions are
+ * fixed to those pins, which is why the handout's pin table cannot be right. */
+#define EE_SPI                  SPI2
+#define EE_SPI_AF               0u
 
 /* ==========================================================================
  * 3. SPI BAUD RATE
  * ========================================================================== */
 
-/* TODO 2.3  Choose BR[2:0] for an SCK of approximately 250 kHz from
- *           PCLK1_HZ, using the BR field description of SPI_CR1 in RM0091.
- *           Show the arithmetic in your report. Do not tune it until the
- *           waveform "looks right". */
-#define EE_SPI_BR               0UL         /* <- TODO                      */
+/* 8 MHz / 250 kHz = 32, and RM0091 section 27.7.1 gives BR = 100 for
+ * fPCLK/32. The divide is 2^(BR+1), which is what EE_SCK_HZ_PREDICTED below
+ * works out. */
+#define EE_SPI_BR               4UL
 #define EE_SCK_HZ_PREDICTED     (PCLK1_HZ >> (EE_SPI_BR + 1U))
 
 /* ==========================================================================
@@ -72,20 +70,20 @@
 #define EEPROM_ADDR_BYTES       2u          /* address bytes, MSB first     */
 #define EEPROM_SIZE_BYTES       8192u
 
-/* TODO 4.1  Instruction opcodes, from the EEPROM datasheet's instruction set
- *           table. */
-#define EEPROM_CMD_WREN         0x00u       /* <- TODO */
-#define EEPROM_CMD_WRDI         0x00u       /* <- TODO */
-#define EEPROM_CMD_RDSR         0x00u       /* <- TODO */
-#define EEPROM_CMD_WRSR         0x00u       /* <- TODO */
-#define EEPROM_CMD_READ         0x00u       /* <- TODO */
-#define EEPROM_CMD_WRITE        0x00u       /* <- TODO */
+/* CAT25640 datasheet, instruction set table. The 8192-byte array and the
+ * 16-bit address in that datasheet match what the README says is fitted. */
+#define EEPROM_CMD_WREN         0x06u
+#define EEPROM_CMD_WRDI         0x04u
+#define EEPROM_CMD_RDSR         0x05u
+#define EEPROM_CMD_WRSR         0x01u
+#define EEPROM_CMD_READ         0x03u
+#define EEPROM_CMD_WRITE        0x02u
 
-/* TODO 4.2  Status register bit MASKS, from the datasheet's status register
- *           table. Which bit says a write is in progress - and is it 1 or 0
- *           while the device is busy? Which bit is the write enable latch? */
-#define EEPROM_SR_RDY           0x00u       /* <- TODO: busy bit mask       */
-#define EEPROM_SR_WEL           0x00u       /* <- TODO                      */
+/* CAT25640 status register table: bit 0 RDY, bit 1 WEL. RDY is named for
+ * ready but reads the other way round - HIGH means the internal write cycle
+ * is still running, LOW means the device will accept commands. */
+#define EEPROM_SR_RDY           0x01u       /* set while BUSY writing       */
+#define EEPROM_SR_WEL           0x02u
 
 /* Upper bound on waiting for a write. A hang guard only: completion must be
  * decided from the status register, never from elapsed time. */
