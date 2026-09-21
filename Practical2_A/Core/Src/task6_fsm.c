@@ -24,17 +24,23 @@
 
 #include "prac2a.h"
 
-/* TODO 6.1  Design your states. You need enough of them to tell apart at
- *           least: idle, write preparation, write transaction, EEPROM busy /
- *           status checking, read transaction, verification, and success or
- *           failure.
- *
- *           Draw the diagram first. It must show the initial state, the
- *           condition on every transition, and the success, failure and
- *           abort paths.
- *
- *           typedef enum { ... } ee_state_t;
- */
+/* Diagram and the reasoning behind these states: docs/task6-state-machine.md */
+typedef enum {
+    EE_IDLE = 0,
+    EE_WRITE_ENABLE,
+    EE_WRITE,
+    EE_BUSY,
+    EE_READ,
+    EE_VERIFY,
+    EE_SUCCEEDED,
+    EE_FAILED
+} ee_state_t;
+
+/* A 5 ms typical write costs about five status reads at this interval. */
+#define EE_POLL_INTERVAL_MS  1u
+
+static uint32_t ee_started_ms = 0u;
+static uint32_t ee_next_poll_ms = 0u;
 
 volatile uint8_t ee_state       = 0u;
 volatile uint8_t ee_last_read   = 0u;
@@ -42,27 +48,114 @@ volatile uint8_t ee_use_fsm     = 1u;
 
 void update_eeprom_state_machine(uint32_t now)
 {
-    /* TODO 6.2  One step of your state machine.
-     *
-     *   - btn_start_edge (PA0) starts a transaction from idle.
-     *   - btn_abort_edge (PA3) abandons the transaction in progress and returns
-     *     to idle. Leave the SPI bus in a state the next transaction can use.
-     *   - While the EEPROM is busy writing, do NOT wait in here. Work out when
-     *     the next status check is due, remember it, and return.
-     *   - Decide that the write has finished from the status register, never
-     *     from elapsed time alone. Also decide what happens if the EEPROM never
-     *     reports ready.
-     *   - Store the byte read back in ee_last_read.
-     *   - Clear each button edge once you have acted on it. */
-    (void)now;
+    /* Abort first, so PA3 is honoured on the same call it arrives. Every
+     * transaction below raises CS before the state advances, so there is no
+     * point here where abandoning the run can strand CS low. */
+    if (btn_abort_edge)
+    {
+        btn_abort_edge = 0u;
+        if ((ee_state != EE_IDLE) && (ee_state != EE_SUCCEEDED)
+                                  && (ee_state != EE_FAILED))
+        {
+            ee_state = EE_IDLE;
+            return;
+        }
+    }
+
+    switch ((ee_state_t)ee_state)
+    {
+    case EE_IDLE:
+    case EE_SUCCEEDED:
+    case EE_FAILED:
+        if (btn_start_edge)
+        {
+            btn_start_edge = 0u;
+            eeprom_verify_ok = 0u;
+            ee_state = EE_WRITE_ENABLE;
+        }
+        break;
+
+    case EE_WRITE_ENABLE:
+        eeprom_status_before = eeprom_read_status();
+        eeprom_write_enable();
+        ee_state = EE_WRITE;
+        break;
+
+    case EE_WRITE:
+        /* One transaction, then out. The internal write cycle starts when CS
+         * rises inside this step, so the clock starts here too. */
+        eeprom_cs_low();
+        (void)spi_transfer(EEPROM_CMD_WRITE);
+        for (uint32_t i = EEPROM_ADDR_BYTES; i > 0u; i--)
+        {
+            (void)spi_transfer((uint8_t)(eeprom_test_addr >> ((i - 1u) * 8u)));
+        }
+        (void)spi_transfer(eeprom_test_byte);
+        eeprom_cs_high();
+
+        ee_started_ms   = now;
+        ee_next_poll_ms = now + EE_POLL_INTERVAL_MS;
+        ee_state        = EE_BUSY;
+        break;
+
+    case EE_BUSY:
+        /* The non-blocking part. Return immediately unless a poll is due. */
+        if ((int32_t)(now - ee_next_poll_ms) < 0)
+        {
+            break;
+        }
+        ee_next_poll_ms = now + EE_POLL_INTERVAL_MS;
+
+        eeprom_status_after = eeprom_read_status();
+        if ((eeprom_status_after & EEPROM_SR_RDY) == 0u)
+        {
+            eeprom_write_wait_ms = (uint32_t)(now - ee_started_ms);
+            ee_state = EE_READ;
+        }
+        else if ((uint32_t)(now - ee_started_ms) >= EEPROM_WRITE_TIMEOUT_MS)
+        {
+            /* A part that never reports ready. Not a verification failure,
+             * so it is counted separately. */
+            eeprom_timeout_count++;
+            ee_state = EE_FAILED;
+        }
+        else
+        {
+            /* still writing */
+        }
+        break;
+
+    case EE_READ:
+        eeprom_read_value = eeprom_read_byte(eeprom_test_addr);
+        ee_last_read      = eeprom_read_value;
+        ee_state          = EE_VERIFY;
+        break;
+
+    case EE_VERIFY:
+        eeprom_verify_ok = (eeprom_read_value == eeprom_test_byte) ? 1u : 0u;
+        ee_state = eeprom_verify_ok ? EE_SUCCEEDED : EE_FAILED;
+        break;
+
+    default:
+        ee_state = EE_IDLE;
+        break;
+    }
 }
 
 void update_outputs(void)
 {
-    /* TODO 6.3  PB0..PB7 show ee_last_read (leds_write_byte). Green after a
-     *           successful verification, red after a failed one
-     *           (status_leds_show). Decide what the status LEDs should show
-     *           while a transaction is in progress, and after an abort. */
+    leds_write_byte(ee_last_read);
+
+    /* Both status LEDs off while a transaction runs and after an abort, so
+     * neither colour can be mistaken for the result of the run in progress.
+     * Green and red mean a verification actually happened. */
+    switch ((ee_state_t)ee_state)
+    {
+    case EE_SUCCEEDED: status_leds_show(STATUS_PASS); break;
+    case EE_FAILED:    status_leds_show(STATUS_FAIL); break;
+    case EE_IDLE:      break;          /* keep whatever the last run showed */
+    default:           status_leds_show(STATUS_OFF); break;
+    }
 }
 
 /* ==========================================================================
@@ -85,9 +178,10 @@ void task6_setup(void)
     eeprom_read_only_path();
     ee_last_read = eeprom_read_value;
 
-    /* TODO 6.4  Your state machine starts in its idle state. Make sure the
-     *           boot-time result (eeprom_verify_ok) still shows on the status
-     *           LEDs, so a reset still shows green for the persistence test. */
+    /* eeprom_read_only_path() has already lit the LEDs from the stored byte.
+     * Idle leaves them alone, so the persistence test still shows green after
+     * a reset without this state machine writing anything. */
+    ee_state = EE_IDLE;
 }
 
 void task6_loop(uint32_t now)
