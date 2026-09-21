@@ -31,19 +31,27 @@ volatile uint32_t eeprom_timeout_count    = 0u;
 
 uint8_t eeprom_read_status(void)
 {
-    /* TODO 4.3  Select the device, send the read-status instruction, clock one
-     *           more byte to receive the status, deselect, and return it.
-     *           Be ready to explain why you have to SEND a byte in order to
-     *           RECEIVE one. */
-    return 0u;
+    uint8_t status;
+
+    /* SPI has no independent read. The master owns the clock, so the only way
+     * to give the EEPROM 8 edges to shift its status out on is to shift a
+     * byte of our own out at the same time. The value sent is ignored. */
+    eeprom_cs_low();
+    (void)spi_transfer(EEPROM_CMD_RDSR);
+    status = spi_transfer(0xFFu);
+    eeprom_cs_high();
+
+    return status;
 }
 
 void eeprom_write_enable(void)
 {
-    /* TODO 4.4  Send the write-enable instruction as one complete
-     *           transaction. Check the datasheet: at what point does the write
-     *           enable latch actually get set? That decides whether this could
-     *           share a transaction with the write itself. */
+    /* Its own transaction, and it has to be. The datasheet sets the latch on
+     * the RISING edge of CS after the WREN opcode, so folding WREN into the
+     * front of the write transaction would never arm it. */
+    eeprom_cs_low();
+    (void)spi_transfer(EEPROM_CMD_WREN);
+    eeprom_cs_high();
 }
 
 void eeprom_write_byte(uint16_t address, uint8_t value)
@@ -55,18 +63,32 @@ void eeprom_write_byte(uint16_t address, uint8_t value)
         return;
     }
 
-    /* TODO 4.5  Enable writes. Then send the write instruction, the address
-     *           (EEPROM_ADDR_BYTES bytes, most significant byte first) and the
-     *           data byte, and deselect. From the datasheet: at what moment
-     *           does the EEPROM actually start writing? */
-    (void)value;
+    eeprom_write_enable();
 
-    /* TODO 4.6  Wait for the write to finish by POLLING THE STATUS REGISTER.
-     *           Bound the loop with EEPROM_WRITE_TIMEOUT_MS so a missing
-     *           device cannot hang the board (count timeouts in
-     *           eeprom_timeout_count), and record how long the write took in
-     *           eeprom_write_wait_ms - your report needs that figure. */
+    /* Address MSB first. Two bytes on this part, not the one the handout's
+     * CAT25040 would take. The internal write cycle starts on the rising edge
+     * of CS, not on the last data bit, so nothing is happening until
+     * eeprom_cs_high() returns. */
+    eeprom_cs_low();
+    (void)spi_transfer(EEPROM_CMD_WRITE);
+    for (uint32_t i = EEPROM_ADDR_BYTES; i > 0u; i--)
+    {
+        (void)spi_transfer((uint8_t)(address >> ((i - 1u) * 8u)));
+    }
+    (void)spi_transfer(value);
+    eeprom_cs_high();
+
+    /* RDY reads HIGH while the write cycle runs. The timeout is a hang guard
+     * only: completion is decided by the bit, never by the clock. */
     start = HAL_GetTick();
+    while ((eeprom_read_status() & EEPROM_SR_RDY) != 0u)
+    {
+        if ((uint32_t)(HAL_GetTick() - start) >= EEPROM_WRITE_TIMEOUT_MS)
+        {
+            eeprom_timeout_count++;
+            break;
+        }
+    }
 
     eeprom_write_wait_ms = (uint32_t)(HAL_GetTick() - start);
 }
@@ -78,9 +100,18 @@ uint8_t eeprom_read_byte(uint16_t address)
         return 0u;
     }
 
-    /* TODO 4.7  Select, send the read instruction and the address, clock one
-     *           more byte to receive the data, deselect, and return it. */
-    return 0u;
+    uint8_t value;
+
+    eeprom_cs_low();
+    (void)spi_transfer(EEPROM_CMD_READ);
+    for (uint32_t i = EEPROM_ADDR_BYTES; i > 0u; i--)
+    {
+        (void)spi_transfer((uint8_t)(address >> ((i - 1u) * 8u)));
+    }
+    value = spi_transfer(0xFFu);
+    eeprom_cs_high();
+
+    return value;
 }
 
 /* ==========================================================================
