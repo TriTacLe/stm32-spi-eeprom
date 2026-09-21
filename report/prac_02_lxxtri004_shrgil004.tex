@@ -34,6 +34,8 @@
   \end{figure}%
 }
 
+\input{measurements}
+
 \begin{document}
 
 \title{Memory-Mapped I/O and Hardware SPI:\\Building and Debugging an EEPROM Driver}
@@ -158,8 +160,7 @@ PB14 and PB15 respectively, all on AF0. These assignments are fixed in silicon
 and cannot be relocated, which is why the pin table given in the practical
 handout cannot describe this device. The mapping confirmed on the board, and
 used throughout, is PB12 chip select, PB13 SCK, PB14 EEPROM serial output and
-PB15 EEPROM serial input. \bench{record the continuity measurements used to
-confirm this, and the anchor pins checked first}
+PB15 EEPROM serial input. \mWiring
 
 Three configuration choices are worth stating explicitly.
 
@@ -198,21 +199,24 @@ not apply and the group test byte is 0x3D, or $00111101_2$.
 \scopefig{task3-sck-mosi.png}{task3}{One complete byte transmitted with the
 chip select held high. CH1 SCK, CH2 MOSI.}
 
-\bench{SCK period $T_{\text{SCK}}$ from cursor measurement}
-
-\bench{clock idle state, and the number of clock cycles counted in the capture}
+Measured from the capture with cursors placed by hand: the clock idles
+\mClockIdle, the capture contains \mClockCycles\ clock cycles, and the period
+is $T_{\text{meas}} = \mSckPeriod$.
 
 \[ f_{\text{meas}} = \frac{1}{T_{\text{meas}}}, \quad
    \%\,\text{err} = \frac{\left|f_{\text{meas}} - f_{\text{pred}}\right|}
                          {f_{\text{pred}}} \times 100 \]
 
-\bench{evaluate both from the measured period against the predicted 250 kHz}
+This gives $f_{\text{meas}} = \mSckFreq$ against the predicted 250\,kHz, a
+frequency error of \mSckError.
 
 \subsection{Manual decoding}
 
-\bench{read the eight data bits off the waveform in order, state which clock
-edge they were sampled on, and show that they reconstruct 0x3D. The decoded
-value must come from the capture, not from the source code.}
+Reading the eight data bits off the waveform in order, most significant first,
+gives \mDecodedBits, which reconstructs \mDecodedValue. The device samples on
+\mSampleEdge. The value is decoded from the capture rather than taken from the
+source, so the waveform is the evidence that the configured bit order and
+sampling edge are the ones actually generated.
 
 \section{EEPROM Driver}
 
@@ -230,9 +234,7 @@ which matches the CAT25640 \cite{cat25640}. Instructions that carry no address,
 such as write-enable and read-status, behave identically on both parts, so the
 distinction only appears once an address is sent: a write with too few address
 bytes is discarded and the write enable latch remains set in the status
-register afterwards. \bench{record the bench observation used to confirm the
-address width, including the status register value seen after a deliberate
-short write}
+register afterwards. \mAddressWidth
 
 \subsection{Transaction sequences}
 
@@ -262,24 +264,22 @@ driver; the timeout of 50\,ms present in the code is an upper bound against a
 device that never responds, against a datasheet maximum write cycle time of
 5\,ms, and it is recorded separately from a verification failure.
 
-\bench{measured write duration from \texttt{eeprom\_write\_wait\_ms}}
-
-\bench{status register values before and after the write, from
-\texttt{eeprom\_status\_before} and \texttt{eeprom\_status\_after}}
-
-\bench{value written, value read back, and whether verification passed}
+The status register read \mStatusBefore\ before the write and \mStatusAfter\
+after it. The write itself took \mWriteWait, against a datasheet maximum of
+5\,ms. Writing \mValueWritten\ to address 0x10 and reading it back gave
+\mValueRead, so verification \mVerifyResult.
 
 \scopefig{task4-cs-sck.png}{task4}{A complete EEPROM transaction. CH1 chip
 select, CH2 SCK, showing the number of clock pulses issued while the device is
 selected.}
 
-\bench{state the clock pulse count visible in the capture and show that it
-matches the expected opcode, address and data bytes}
+The capture shows \mPulseCount\ clock pulses issued while the device is
+selected, which is consistent with one opcode byte, two address bytes and one
+data byte at eight pulses each.
 
 \subsection{Persistence}
 
-\bench{record the persistence test: the value written, the reset or power cycle
-performed, and the value recovered by the read-only path afterwards}
+\mPersistence
 
 \section{Fault Diagnosis}
 
@@ -316,16 +316,12 @@ independent fault.
 \toprule
 Expected & Observed & Cause & Correction \\
 \midrule
-\bench{fill} & \bench{fill} & \bench{fill} & \bench{fill} \\
+\mFaultExpected & \mFaultObserved & \mFaultCause & \mFaultCorrection \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\bench{state what waveform or behaviour was expected, what the board actually
-produced, and the first point at which the two differ. Identify the register
-and the specific field responsible, apply the correction, repeat the
-measurement, and explain electrically why the corrected configuration now
-satisfies the device's requirements.}
+\mFaultNarrative
 
 \scopefig{task5-faulty.png}{faulty}{The faulty case.}
 
@@ -425,8 +421,7 @@ for the duration of the write cycle because the processor is inside the status
 polling loop; under the state machine it continues without interruption, and
 PA3 remains responsive throughout.
 
-\bench{capture or describe the heartbeat in both modes, and give one complete
-write, read and verify result obtained through the state machine}
+\mHeartbeat\ \mFsmResult
 
 \begin{thebibliography}{9}
 

@@ -90,7 +90,14 @@ BIN = $(CP) -O binary -S
 #######################################
 MCU = -mcpu=cortex-m0 -mthumb
 
-C_DEFS = -DSTM32F051x8 -DUSE_HAL_DRIVER
+# Which task the firmware runs. Overridable from the command line so a bench
+# session never has to edit main.c: make RUN_TASK=3
+RUN_TASK ?=
+ifneq ($(RUN_TASK),)
+RUN_TASK_DEF = -DRUN_TASK=$(RUN_TASK)
+endif
+
+C_DEFS = -DSTM32F051x8 -DUSE_HAL_DRIVER $(RUN_TASK_DEF)
 
 C_INCLUDES =  \
 -ICore/Inc \

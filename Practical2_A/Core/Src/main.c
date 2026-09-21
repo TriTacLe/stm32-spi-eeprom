@@ -27,7 +27,11 @@
 
 #include "prac2a.h"
 
+/* Overridable from the build: make RUN_TASK=3. Editing this line still works
+ * and is what STM32CubeIDE uses, since it does not pass the define. */
+#ifndef RUN_TASK
 #define RUN_TASK    1
+#endif
 
 volatile uint8_t run_task = RUN_TASK;
 
