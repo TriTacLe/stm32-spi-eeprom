@@ -288,6 +288,26 @@ built with \texttt{RUN\_TASK} set to 5. The same program built with
 \texttt{RUN\_TASK} set to 4 runs without it, so the two differ by a single
 configuration value and their measurements compare directly.
 
+\subsection{Expected behaviour}
+
+The comparison is only meaningful against a prediction made beforehand, so the
+correct behaviour is stated here from the configuration of
+Table~\ref{tab:spiconfig} rather than from what the board turned out to do.
+
+With CPOL and CPHA both zero the clock idles low, the first edge of each bit
+period is a rising edge, and the device samples on that first edge while the
+master changes MOSI on the falling edge that follows. Data is transmitted most
+significant bit first. Each byte is eight clock pulses, so a byte write of one
+opcode, two address bytes and one data byte is 32 pulses issued while the chip
+select is low, and the chip select frames the whole transaction without
+returning high inside it. The period of each pulse is 4\,\textmu s at the
+configured 250\,kHz.
+
+Any departure from that list is the starting point of the diagnosis, and the
+first departure in time is the one that matters: a difference later in a
+transaction is usually a consequence of an earlier one rather than an
+independent fault.
+
 \begin{table}[htbp]
 \caption{Fault diagnosis}
 \label{tab:fault}
