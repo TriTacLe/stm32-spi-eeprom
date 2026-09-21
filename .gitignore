@@ -16,3 +16,6 @@ report/*.aux
 report/*.log
 report/*.out
 report/*.pdf
+
+# page renders used to proof the layout
+report/page-*.png
