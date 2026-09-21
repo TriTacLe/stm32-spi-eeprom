@@ -21,42 +21,76 @@ volatile uint32_t dbg_sck_hz_predicted = 0u;
 
 void eeprom_spi_init(void)
 {
-    /* TODO 2.4  Enable the clocks this needs: the GPIO port that carries the
-     *           pins AND the SPI peripheral itself. They are in different RCC
-     *           enable registers - find both in RM0091. */
+    uint32_t reg;
 
-    /* TODO 2.5  Chip select: make EE_PIN_CS a general purpose output driven
-     *           HIGH. Think about the ORDER of those two steps. Be ready to
-     *           explain why CS must start high. */
+    /* RM0091 section 7.4.6: GPIOB clock is AHBENR bit 18. SPI2 sits on APB1,
+     * so its enable is APB1ENR bit 14 (section 7.4.8). */
+    RCC->AHBENR  |= RCC_AHBENR_GPIOBEN;
+    RCC->APB1ENR |= RCC_APB1ENR_SPI2EN;
+    (void)RCC->APB1ENR;
 
-    /* TODO 2.6  SCK, MISO and MOSI: put them in alternate-function mode
-     *           (MODER), and select the alternate function number EE_SPI_AF
-     *           (the AF register for pins 8..15). Both registers are needed. */
+    /* CS high BEFORE it becomes an output, so the pin never presents a low to
+     * the EEPROM. MODER last means the first level the device ever sees is
+     * the deselected one. */
+    EE_SPI_GPIO->BSRR = EE_CS_MASK;
+    reg  = EE_SPI_GPIO->MODER;
+    reg &= ~MODER2_MASK(EE_PIN_CS);
+    reg |= MODER2(EE_PIN_CS, 1u);          /* general purpose output */
+    EE_SPI_GPIO->MODER = reg;
 
-    /* TODO 2.7  Recommended: high output speed on SCK and MOSI, and a pull-up
-     *           on MISO. In your report, explain what the EEPROM does with its
-     *           output pin while CS is high, and why a pull-up helps. */
+    /* SCK, MISO and MOSI to alternate function (MODER = 10), then AF0 in the
+     * high alternate-function register since all three are pins 8..15.
+     * STM32F051 datasheet Table 15. */
+    reg  = EE_SPI_GPIO->AFR[1];
+    reg &= ~(AFRH4_MASK(EE_PIN_SCK) | AFRH4_MASK(EE_PIN_MISO) | AFRH4_MASK(EE_PIN_MOSI));
+    reg |= AFRH4(EE_PIN_SCK,  EE_SPI_AF)
+         | AFRH4(EE_PIN_MISO, EE_SPI_AF)
+         | AFRH4(EE_PIN_MOSI, EE_SPI_AF);
+    EE_SPI_GPIO->AFR[1] = reg;
 
-    /* TODO 2.8  SPI_CR2: 8-bit data frames, and a receive FIFO threshold that
-     *           reports a received byte after 8 bits. Read the RM0091
-     *           description of the FIFO threshold carefully - on the STM32F0
-     *           the reset value does not suit single-byte transfers.
-     *           Configure CR2 BEFORE enabling the peripheral. */
+    reg  = EE_SPI_GPIO->MODER;
+    reg &= ~(MODER2_MASK(EE_PIN_SCK) | MODER2_MASK(EE_PIN_MISO) | MODER2_MASK(EE_PIN_MOSI));
+    reg |= MODER2(EE_PIN_SCK,  2u)
+         | MODER2(EE_PIN_MISO, 2u)
+         | MODER2(EE_PIN_MOSI, 2u);
+    EE_SPI_GPIO->MODER = reg;
 
-    /* TODO 2.9  SPI_CR1: master mode, your baud-rate divider, the clock
-     *           polarity and phase the EEPROM supports (EEPROM datasheet), and
-     *           the bit order.
-     *           You are driving CS yourself on a GPIO. Read RM0091 on
-     *           slave-select (NSS) management in master mode: if the
-     *           peripheral believes its NSS input is low it will leave master
-     *           mode on its own, and you will see no clock at all. */
+    /* High speed on the two pins we drive, so the edges are square at the
+     * EEPROM rather than slewed. */
+    reg  = EE_SPI_GPIO->OSPEEDR;
+    reg |= MODER2(EE_PIN_SCK, 3u) | MODER2(EE_PIN_MOSI, 3u);
+    EE_SPI_GPIO->OSPEEDR = reg;
+
+    /* The EEPROM releases its output pin whenever CS is high, so MISO would
+     * otherwise float and the input buffer would sit at an undefined level. */
+    reg  = EE_SPI_GPIO->PUPDR;
+    reg &= ~MODER2_MASK(EE_PIN_MISO);
+    reg |= MODER2(EE_PIN_MISO, 1u);        /* pull-up */
+    EE_SPI_GPIO->PUPDR = reg;
+
+    /* CR2 before the peripheral is enabled. DS = 0111 for 8-bit frames, and
+     * FRXTH = 1 so RXNE fires on a quarter-full FIFO, i.e. after 8 bits. The
+     * reset value of FRXTH is 0, which waits for 16 bits and would hang a
+     * single-byte transfer (RM0091 section 27.7.2). */
+    EE_SPI->CR2 = SPI_CR2_FRXTH
+                | SPI_CR2_DS_0 | SPI_CR2_DS_1 | SPI_CR2_DS_2;
+
+    /* CR1: master, BR from board_config, CPOL = CPHA = 0 for the EEPROM's
+     * mode (0,0), MSB first.
+     * SSM with SSI held high is what keeps the peripheral in master mode: we
+     * drive CS on a GPIO, so nothing drives the NSS input, and a master that
+     * sees NSS low clears MSTR and stops producing a clock entirely
+     * (RM0091 section 27.7.1). */
+    EE_SPI->CR1 = SPI_CR1_MSTR
+                | ((uint32_t)EE_SPI_BR << SPI_CR1_BR_Pos)
+                | SPI_CR1_SSM | SPI_CR1_SSI;
 
     /* Task 5 fault case. Leave this call exactly here: after your CR1 and CR2
      * configuration, before the peripheral is enabled. It does nothing unless
      * RUN_TASK is 5. */
     task5_fault_hook();
 
-    /* TODO 2.10  Enable the peripheral. */
+    EE_SPI->CR1 |= SPI_CR1_SPE;
 
     dbg_gpiob_moder      = EE_SPI_GPIO->MODER;
     dbg_gpiob_afrh       = EE_SPI_GPIO->AFR[1];
