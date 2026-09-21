@@ -20,3 +20,4 @@ report/*.pdf
 # page renders used to proof the layout
 report/page-*.png
 report/chk-*.png
+report/verify/
