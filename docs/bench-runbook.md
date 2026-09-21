@@ -159,6 +159,9 @@ what is being marked.
 - Ask for a different address or byte: `eeprom_test_addr` and
   `eeprom_test_byte` are writable, and the demonstrator may well do this.
 
+The state diagram is drawn in the report itself and needs nothing from this
+session.
+
 **To show non-blocking:** probe PC13 and set `ee_use_fsm` to 0, which runs the
 Task 4 blocking path on PA0 instead. The heartbeat stops during the write cycle
 in the blocking path and keeps running under the state machine. Same build,

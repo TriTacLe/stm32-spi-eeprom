@@ -13,6 +13,8 @@
 \usepackage{xcolor}
 \usepackage{float}
 \usepackage[hidelinks]{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{automata, positioning, arrows.meta, fit}
 
 \newcommand{\bench}[1]{\textcolor{red}{\textbf{[BENCH: #1]}}}
 
@@ -182,8 +184,10 @@ never observes an asserted chip select during initialisation.
 
 With $n_1 = 4$ (LXXTRI004) and $n_2 = 4$ (SHRGIL004):
 
-\[ B = \left[(n_1 \oplus n_2) + \text{0x3D}\right] \bmod 256
-     = (0 + 61) \bmod 256 = \text{0x3D} \]
+\begin{align*}
+B &= \left[(n_1 \oplus n_2) + \text{0x3D}\right] \bmod 256 \\
+  &= (0 + 61) \bmod 256 = \text{0x3D}
+\end{align*}
 
 Since both student numbers end in the same three digits the exclusive-or
 vanishes. The result is neither 0x00 nor 0xFF, so the 0x5A substitution does
@@ -198,12 +202,11 @@ chip select held high. CH1 SCK, CH2 MOSI.}
 
 \bench{clock idle state, and the number of clock cycles counted in the capture}
 
-\[ f_{\text{SCK,measured}} = \frac{1}{T_{\text{SCK,measured}}}
-   = \bench{compute from the measured period} \]
+\[ f_{\text{meas}} = \frac{1}{T_{\text{meas}}}, \quad
+   \%\,\text{err} = \frac{\left|f_{\text{meas}} - f_{\text{pred}}\right|}
+                         {f_{\text{pred}}} \times 100 \]
 
-\[ \%\,\text{error} =
-   \frac{\left|f_{\text{measured}} - f_{\text{predicted}}\right|}
-        {f_{\text{predicted}}} \times 100 = \bench{compute} \]
+\bench{evaluate both from the measured period against the predicted 250 kHz}
 
 \subsection{Manual decoding}
 
@@ -313,7 +316,57 @@ correction.}
 
 \subsection{State machine}
 
-\scopefig{task6-fsm.png}{fsm}{State diagram for the EEPROM transaction.}
+\begin{figure*}[htbp]
+\centering
+\begin{tikzpicture}[
+  node distance = 14mm and 15mm,
+  every state/.style = {draw, rectangle, rounded corners=3pt, inner sep=3.5pt,
+                        minimum size=0pt, font=\scriptsize, align=center},
+  every edge/.style = {draw, -{Stealth[length=4pt]}},
+  auto, font=\scriptsize]
+
+  \node[state, initial, initial text=] (idle)  {Idle};
+  \node[state, right=of idle]   (wren)   {Write\\enable};
+  \node[state, right=of wren]   (write)  {Write};
+  \node[state, right=of write]  (busy)   {Busy};
+  \node[state, right=of busy]   (read)   {Read};
+  \node[state, right=of read]   (verify) {Verify};
+  \node[state, above right=6mm and 15mm of verify] (ok)  {Succeeded};
+  \node[state, below right=6mm and 15mm of verify] (bad) {Failed};
+
+  \path (idle)   edge node {PA0} (wren)
+        (wren)   edge node {WREN sent} (write)
+        (write)  edge node {CS raised} (busy)
+        (busy)   edge node {RDY low} (read)
+        (read)   edge node {byte in} (verify)
+        (verify) edge node {match} (ok)
+        (verify) edge node[swap] {differ} (bad);
+
+  \path (busy) edge [loop above] node {poll due, RDY high} (busy);
+  \path (busy) edge [bend right=22] node[swap, pos=0.72] {timeout} (bad);
+
+  % Both terminal states restart on PA0. One edge from the pair, routed over
+  % the top, so it never crosses the abort path below.
+  \node[fit=(ok)(bad), inner sep=1pt] (done) {};
+  \draw[-{Stealth[length=4pt]}]
+        (done.north) to[out=105, in=62, looseness=0.55]
+        node[above, pos=0.55, font=\scriptsize] {PA0 restarts} (idle.north);
+
+  % One abort boundary rather than five crossing edges, routed underneath.
+  \node[draw, dashed, gray, rounded corners=5pt,
+        fit=(wren)(write)(busy)(read)(verify), inner sep=7pt] (active) {};
+  \node[gray, font=\scriptsize\itshape, above=0.5mm of active.north east,
+        anchor=south east] {active transaction};
+  \draw[dashed, -{Stealth[length=4pt]}]
+        (active.south west) to[out=250, in=290, looseness=1.1]
+        node[below, pos=0.5, font=\scriptsize] {PA3 abort} (idle.south);
+\end{tikzpicture}
+\caption{State diagram for the EEPROM transaction. PA3 returns the machine to
+Idle from any state inside the dashed boundary. The self-loop on Busy is the
+non-blocking wait: it is taken once per poll interval and returns immediately
+rather than waiting inside the state.}
+\label{fig:fsm}
+\end{figure*}
 
 The machine has eight states: idle, write-enable, write, busy, read, verify,
 succeeded and failed. Write-enable and write are distinct states because the
