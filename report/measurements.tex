@@ -1,0 +1,63 @@
+% ============================================================================
+% BENCH MEASUREMENTS - the only file that needs editing after the lab session.
+%
+% Each entry below is a slot. Replace the \bench{...} with the value measured,
+% keeping the braces. Anything still holding a \bench{...} renders red in the
+% PDF, so the report is finished exactly when nothing here is red any more.
+%
+% Do not put a value here that was not actually measured.
+% ============================================================================
+
+% --- Section 2: wiring confirmed with a meter -------------------------------
+% One or two sentences: which pins were checked, what the anchor pins (EEPROM
+% VCC to 3V3, VSS to GND) did, and whether the README's mapping held.
+\newcommand{\mWiring}{\bench{continuity check result}}
+
+% --- Section 3: the SCK and MOSI capture ------------------------------------
+\newcommand{\mSckPeriod}{\bench{SCK period, e.g. 4.02 us}}
+\newcommand{\mSckFreq}{\bench{1/period, e.g. 248.8 kHz}}
+\newcommand{\mSckError}{\bench{percent error against 250 kHz}}
+\newcommand{\mClockIdle}{\bench{idle state of SCK, high or low}}
+\newcommand{\mClockCycles}{\bench{clock cycles counted in the capture}}
+
+% Bit sequence read off the screen, MSB first, and the value it reconstructs.
+% Read this from the waveform, not from the source.
+\newcommand{\mDecodedBits}{\bench{eight bits in order}}
+\newcommand{\mDecodedValue}{\bench{value they give}}
+\newcommand{\mSampleEdge}{\bench{which edge the device samples on}}
+
+% --- Section 4: the EEPROM ---------------------------------------------------
+% How the address width was confirmed on the bench, including what the status
+% register showed after a deliberate short write if that was tried.
+\newcommand{\mAddressWidth}{\bench{how the two-byte address was confirmed}}
+
+\newcommand{\mStatusBefore}{\bench{eeprom\_status\_before}}
+\newcommand{\mStatusAfter}{\bench{eeprom\_status\_after}}
+\newcommand{\mWriteWait}{\bench{eeprom\_write\_wait\_ms}}
+\newcommand{\mValueWritten}{\bench{value written}}
+\newcommand{\mValueRead}{\bench{value read back}}
+\newcommand{\mVerifyResult}{\bench{passed or failed}}
+\newcommand{\mPulseCount}{\bench{clock pulses while CS is low}}
+
+% What was written, what the reset was, what came back afterwards.
+\newcommand{\mPersistence}{\bench{persistence test result}}
+
+% --- Section 5: the fault ----------------------------------------------------
+% The four table columns. Keep each to a phrase; the narrative goes below.
+\newcommand{\mFaultExpected}{\bench{expected}}
+\newcommand{\mFaultObserved}{\bench{observed}}
+\newcommand{\mFaultCause}{\bench{register and field}}
+\newcommand{\mFaultCorrection}{\bench{correction}}
+
+% The diagnosis in prose: the first meaningful difference between the two
+% captures, and why the corrected configuration now satisfies the device
+% electrically. This is where the marks are.
+\newcommand{\mFaultNarrative}{\bench{diagnosis: first difference, why the
+correction works electrically}}
+
+% --- Section 6: the state machine --------------------------------------------
+% What PC13 did in each mode, with ee_use_fsm at 1 and at 0.
+\newcommand{\mHeartbeat}{\bench{heartbeat under the FSM versus the blocking path}}
+
+% One complete run through the state machine.
+\newcommand{\mFsmResult}{\bench{one write, read and verify result via the FSM}}

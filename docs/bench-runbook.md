@@ -2,10 +2,32 @@
 
 Order of operations for the lab sessions. Everything in the repo that does not
 need hardware is already done, so a session that follows this list end to end
-produces every missing number and all six figures the report asks for.
+produces every missing number and the five figures the report asks for.
+
+**Nothing here needs source editing.** Select the task on the build command,
+`make RUN_TASK=3`, and the firmware builds for that task. `main.c` does not
+change. STM32CubeIDE, which does not pass the define, still uses the
+`RUN_TASK` value in `main.c`, so both routes work.
+
+**Nothing here needs LaTeX editing either.** Every measured value goes into
+`report/measurements.tex`, which is a flat list of slots. Replace the
+`\bench{...}` on a line with the value, keep the braces, leave the rest of the
+report alone.
 
 The report is finished when no red text remains in it. That is the only
 completion test worth using.
+
+## Setting up on the lab machine
+
+```
+git clone git@github.com:TriTacLe/EEE3096S-prac2.git
+cd EEE3096S-prac2/Practical2_A
+make RUN_TASK=1
+```
+
+For the debugger, import `Practical2_A` into STM32CubeIDE as
+`File > Import > Existing Code as Makefile Project`, MCU ARM GCC toolchain.
+The Live Expressions variables named below all come from that session.
 
 ## Before power
 
@@ -40,7 +62,7 @@ Goes into report section 2, replacing the continuity `\bench{}`.
 
 ## 2. Task 1, PC13 (issue #3, code already merged)
 
-`RUN_TASK 1`. Probe PC13 on header P1.
+`make RUN_TASK=1`. Probe PC13 on header P1.
 
 Expect a square wave at roughly 100 Hz, the default `task1_half_period_ms` of
 5 ms each way. Change that variable in Live Expressions to prove the loop is
@@ -53,7 +75,7 @@ dead, the clock enable is the first suspect.
 
 ## 3. Task 2, registers (issue #5, code already merged)
 
-`RUN_TASK 2`. No capture needed, this is a debugger step.
+`make RUN_TASK=2`. No capture needed, this is a debugger step.
 
 In Live Expressions check `dbg_spi_cr1`, `dbg_spi_cr2`, `dbg_spi_sr` and
 `dbg_sck_hz_predicted`. `dbg_sck_hz_predicted` must read 250000.
@@ -67,7 +89,7 @@ mode on its own and SSI is the thing to look at.
 
 ## 4. Task 3, the waveform (issue #7)
 
-`RUN_TASK 3`. CH1 on SCK, CH2 on MOSI. The byte goes out every 100 ms with CS
+`make RUN_TASK=3`. CH1 on SCK, CH2 on MOSI. The byte goes out every 100 ms with CS
 held high, so trigger on the SCK burst.
 
 **Capture as `report/figures/task3-sck-mosi.png`.** The capture has to be good
@@ -91,7 +113,7 @@ this should not appear, but it is the first thing to count.
 
 ## 5. Task 4, the EEPROM (issues #8, #9, #10)
 
-`RUN_TASK 4`. Press PA0 for one write, read and verify.
+`make RUN_TASK=4`. Press PA0 for one write, read and verify.
 
 Record from Live Expressions:
 
@@ -125,8 +147,8 @@ writes.
 
 ## 6. Task 5, the fault (issue #11)
 
-`RUN_TASK 5` is the Task 4 program with one configuration value changed.
-`RUN_TASK 4` is the same program without it.
+`make RUN_TASK=5` is the Task 4 program with one configuration value changed.
+`make RUN_TASK=4` is the same program without it.
 
 **Check `run_task` in Live Expressions before trusting any measurement here.**
 It says which mode is actually on the board.
@@ -150,7 +172,7 @@ what is being marked.
 
 ## 7. Task 6, the state machine (issue #13, code already merged)
 
-`RUN_TASK 6`. PA0 starts, PA3 aborts.
+`make RUN_TASK=6`. PA0 starts, PA3 aborts.
 
 - Watch `ee_state` change in the debugger through a full run.
 - Confirm the byte appears on PB0 to PB7 and green lights on success.
@@ -172,8 +194,25 @@ Export the state diagram from `docs/task6-state-machine.md` as
 
 ## Closing out
 
-Rebuild the report and check that no red text and no red boxes remain. Then
-push the code, upload the PDF to Gradescope **before** the demo, and add the
-other group member to that same submission.
+Five captures should now be in `report/figures/`:
+
+| File | From step |
+|---|---|
+| `task1-pc13.png` | 2 |
+| `task3-sck-mosi.png` | 4 |
+| `task4-cs-sck.png` | 5 |
+| `task5-faulty.png` | 6 |
+| `task5-corrected.png` | 6 |
+
+The state diagram is not in that list. It is drawn in the report itself.
+
+Every scope shot needs the cursors visible in frame. A trace without cursor
+values is not evidence.
+
+Then fill in `report/measurements.tex`, build with `pdflatex` run twice, and
+check that no red text and no red boxes remain anywhere in the PDF.
+
+Finally: push the code, upload the PDF to Gradescope **before** the demo, and
+add the other group member to that same submission.
 
 Do not resubmit after the demo. It resets the demo mark to zero.
