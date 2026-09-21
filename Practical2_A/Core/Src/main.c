@@ -21,8 +21,7 @@
   *   RUN_TASK 5   the Task 4 program with the fault case applied
   *   RUN_TASK 6   your non-blocking state machine: PA0 start, PA3 abort
   *
-  * Start with board_config.h (TODO 0). Search the project for TODO: the number
-  * before the dot is the task.
+  * Board facts and the looked-up register values live in board_config.h.
   ******************************************************************************
   */
 
@@ -32,10 +31,8 @@
 
 volatile uint8_t run_task = RUN_TASK;
 
-/* TODO 3.2  Once STUDENT_N1/N2 are filled in (board_config.h), work out B and A
- *           BY HAND, put your values into these two checks and uncomment
- *           them. If the build disagrees with your hand calculation, you find
- *           out now rather than at the demonstration. */
+/* Hand-worked values on the left, so the build breaks if the formulas in
+ * board_config.h and our arithmetic ever disagree. */
 _Static_assert(TEST_BYTE_B   == 0x3Du, "group test byte B mismatch");
 _Static_assert(EEPROM_ADDR_A == 0x10u, "group address A mismatch");
 
@@ -82,7 +79,7 @@ int main(void)
 
 /**
   * @brief System clock: HSI, no PLL, AHB /1, APB1 /1.
-  *        Read this when you work out PCLK1_HZ (TODO 2.1).
+  *        This is where PCLK1_HZ in board_config.h comes from.
   */
 void SystemClock_Config(void)
 {

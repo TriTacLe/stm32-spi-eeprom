@@ -1,22 +1,14 @@
 /**
   ******************************************************************************
   * @file    board_config.h
-  * @brief   Board facts, and the values you must look up.
+  * @brief   Board facts and the values looked up for them.
   *
-  * TODO 0 - START HERE.
+  * Every value here carries the document it came from, because the report
+  * has to cite one per field.
   *
-  * Values marked TODO have to be FOUND in the document named next to them.
-  * The handout is explicit: "Where a task asks for a register field,
-  * peripheral address, alternate function, command value, timing requirement,
-  * or status bit, do not guess it."
-  *
-  * The project compiles with the placeholders, but the board will not work
-  * until they are correct. That is deliberate.
-  *
-  * Two things below are GIVEN rather than left as TODOs: the SPI pin mapping
-  * and the EEPROM address format. The handout is wrong about both on this
-  * board, so you could not find the right answer in your documents. README
-  * section 5 explains how to confirm them on the bench - do that.
+  * Two are not in any document we were given: the SPI pin mapping and the
+  * EEPROM address format. The handout is wrong about both on this board, so
+  * they come from the starter README and still need confirming on the bench.
   ******************************************************************************
   */
 
@@ -108,10 +100,9 @@
  * 6. GROUP VALUES
  * ========================================================================== */
 
-/* TODO 3.1  The last three decimal digits of each student number.
- *           Write them WITHOUT leading zeros: in C, 010 is octal, i.e. 8.
- *           Then work out B and A by hand for your report, and check them
- *           against the build (TODO 3.2 in main.c). */
+/* Last three decimal digits of each student number, without leading zeros
+ * since a leading zero would make these octal. B and A are checked against
+ * hand-worked values in main.c. */
 #define STUDENT_N1              4u          /* LXXTRI004 */
 #define STUDENT_N2              4u          /* SHRGIL004 */
 
