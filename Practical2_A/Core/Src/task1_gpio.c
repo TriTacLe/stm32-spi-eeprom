@@ -36,10 +36,9 @@
 /* MODER holds two bits per pin; 01 is general purpose output (RM0091 9.4.1). */
 #define MODER_OUTPUT        1UL
 
-/* One pointer is declared for you to show the pattern. Be ready to explain
- * what `volatile` does here, and what can go wrong without it.
- *
- * TODO 1.3  Declare pointers for the GPIOC registers you use, the same way. */
+/* volatile stops the compiler caching a register in a core register or
+ * dropping a store it thinks is dead. ODR is read back in the toggle below,
+ * and the SPI status flags later are changed by hardware, not by our code. */
 static volatile uint32_t * const pRCC_AHBENR =
         (volatile uint32_t *)(RCC_BASE_ADDR + RCC_AHBENR_OFFSET);
 
@@ -52,12 +51,8 @@ static volatile uint32_t * const pGPIOC_BSRR =
 static volatile uint32_t * const pGPIOC_BRR =
         (volatile uint32_t *)(GPIOC_BASE_ADDR + GPIO_BRR_OFFSET);
 
-/* TODO 1.4  Once TODO 1.1 and 1.2 are done, UNCOMMENT these checks. They
- *           compare your addresses with the CMSIS device header, so a wrong
- *           base or offset fails the build and names the culprit. Fix your
- *           address - do not edit the right-hand side.
- *           (They are commented out only so the project builds before you
- *           start, letting you check your toolchain first.) */
+/* Every address above is checked against the CMSIS device header at build
+ * time, so a wrong base or offset breaks the build and names the culprit. */
 
 _Static_assert(RCC_BASE_ADDR   == RCC_BASE,   "RCC base mismatch");
 _Static_assert(GPIOC_BASE_ADDR == GPIOC_BASE, "GPIOC base mismatch");
