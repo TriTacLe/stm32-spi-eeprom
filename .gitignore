@@ -10,3 +10,9 @@ build/
 .DS_Store
 *.swp
 *~
+
+# latex build output
+report/*.aux
+report/*.log
+report/*.out
+report/*.pdf
