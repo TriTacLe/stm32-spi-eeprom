@@ -120,11 +120,12 @@ uint8_t eeprom_read_byte(uint16_t address)
 
 void leds_write_byte(uint8_t v)
 {
-    /* TODO 4.8  Show v on PB0..PB7 (LED7..LED0 = bit 7..bit 0).
-     *           Do it without disturbing PB10..PB15 on the same port - those
-     *           carry the status LEDs, CS and the SPI pins. One register lets
-     *           you set some pins and reset others in a single write. */
-    (void)v;
+    /* BSRR sets in its low half and resets in its high half, so one write
+     * places all eight bits and touches nothing else on the port. PB10..PB15
+     * carry the status LEDs, CS and the SPI pins; a read-modify-write of ODR
+     * would put CS at risk mid-transaction. */
+    LED_BYTE_GPIO->BSRR = ((uint32_t)v & LED_BYTE_MASK)
+                        | ((uint32_t)(~v & LED_BYTE_MASK) << 16);
 }
 
 /* ==========================================================================
@@ -144,15 +145,19 @@ void eeprom_read_only_path(void)
 
 void eeprom_write_verify_path(void)
 {
-    /* TODO 4.9  The complete Task 4 sequence, using eeprom_test_addr and
-     *           eeprom_test_byte:
-     *             - read the status register     -> eeprom_status_before
-     *             - write the byte (waits until the write has completed)
-     *             - read the status register     -> eeprom_status_after
-     *             - read the byte back           -> eeprom_read_value
-     *             - compare with what you wrote  -> eeprom_verify_ok
-     *             - show the byte read on the LEDs
-     *             - optional: status_leds_show(STATUS_PASS or STATUS_FAIL) */
+    eeprom_status_before = eeprom_read_status();
+    eeprom_write_byte(eeprom_test_addr, eeprom_test_byte);
+
+    /* Read after the write for the report: WEL should have cleared itself,
+     * and a WEL still set here is the README's symptom of a wrong address
+     * length rather than a wiring fault. */
+    eeprom_status_after  = eeprom_read_status();
+
+    eeprom_read_value    = eeprom_read_byte(eeprom_test_addr);
+    eeprom_verify_ok     = (eeprom_read_value == eeprom_test_byte) ? 1u : 0u;
+
+    leds_write_byte(eeprom_read_value);
+    status_leds_show(eeprom_verify_ok ? STATUS_PASS : STATUS_FAIL);
 }
 
 /* ==========================================================================
