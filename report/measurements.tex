@@ -26,16 +26,11 @@
 % register showed after a deliberate short write if that was tried.
 \newcommand{\mAddressWidth}{The write transaction that succeeded sends the opcode followed by two address bytes, 0x02 0x00 0x10 0x3D, and the byte read back afterwards matched. A single address byte would have left the address misaligned and the write discarded, so the two-byte format is confirmed by the transaction working rather than by the part number printed on the device.}
 
-\newcommand{\mStatusBefore}{\bench{eeprom\_status\_before}}
-\newcommand{\mStatusAfter}{\bench{eeprom\_status\_after}}
-\newcommand{\mWriteWait}{\bench{eeprom\_write\_wait\_ms}}
 \newcommand{\mValueWritten}{0x3D}
 \newcommand{\mValueRead}{0x3D, shown on the LEDs as 00111101}
 \newcommand{\mVerifyResult}{passed}
 \newcommand{\mPulseCount}{32 pulses for the write itself, being one opcode byte, two address bytes and one data byte at eight pulses each. The wider capture also shows the two byte status read and the single byte write-enable that precede it}
 
-% What was written, what the reset was, what came back afterwards.
-\newcommand{\mPersistence}{\bench{persistence test result}}
 
 % --- Section 5: the fault ----------------------------------------------------
 % The four table columns. Keep each to a phrase; the narrative goes below.
@@ -54,8 +49,6 @@ The first meaningful difference between the two captures is where MOSI moves rel
 Electrically this violates the setup and hold requirement around the sampling edge: the device may capture the previous bit, the new bit, or a level that is neither while the line is in transition. Returning CPHA to 0 restores the falling-edge update, MOSI is stable before each rising edge, and the transaction completes correctly.}
 
 % --- Section 6: the state machine --------------------------------------------
-% What PC13 did in each mode, with ee_use_fsm at 1 and at 0.
-\newcommand{\mHeartbeat}{\bench{heartbeat under the FSM versus the blocking path}}
 
 % One complete run through the state machine.
 \newcommand{\mFsmResult}{\bench{one write, read and verify result via the FSM}}
