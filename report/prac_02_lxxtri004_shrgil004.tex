@@ -167,7 +167,15 @@ PB14 and PB15 respectively, all on AF0. These assignments are fixed in silicon
 and cannot be relocated, which is why the pin table given in the practical
 handout cannot describe this device. The mapping confirmed on the board, and
 used throughout, is PB12 chip select, PB13 SCK, PB14 EEPROM serial output and
-PB15 EEPROM serial input. \mWiring
+PB15 EEPROM serial input.
+
+Four pieces of evidence agree on that mapping. The alternate function table fixes
+the SPI2 functions to these pins in silicon, so no other arrangement is possible
+on this part. The debugger shows GPIOB with those three pins in alternate
+function mode and AFRH at zero, selecting AF0. The capture in
+Fig.~\ref{fig:task3} shows a 250\,kHz clock on the pin identified as SCK. And the
+transaction in Fig.~\ref{fig:task4} completes with the written byte read back
+correctly, which could not happen through an incorrect mapping.
 
 Three configuration choices are worth stating explicitly.
 
