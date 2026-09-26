@@ -14,46 +14,49 @@
 \newcommand{\mWiring}{\bench{continuity check result}}
 
 % --- Section 3: the SCK and MOSI capture ------------------------------------
-\newcommand{\mSckPeriod}{\bench{SCK period, e.g. 4.02 us}}
-\newcommand{\mSckFreq}{\bench{1/period, e.g. 248.8 kHz}}
-\newcommand{\mSckError}{\bench{percent error against 250 kHz}}
-\newcommand{\mClockIdle}{\bench{idle state of SCK, high or low}}
-\newcommand{\mClockCycles}{\bench{clock cycles counted in the capture}}
+\newcommand{\mSckPeriod}{4.006\,\mu\mathrm{s}}
+\newcommand{\mSckFreq}{249.6\,\mathrm{kHz}}
+\newcommand{\mSckError}{0.16\,\%}
+\newcommand{\mClockIdle}{low}
+\newcommand{\mClockCycles}{eight}
 
 % Bit sequence read off the screen, MSB first, and the value it reconstructs.
 % Read this from the waveform, not from the source.
-\newcommand{\mDecodedBits}{\bench{eight bits in order}}
-\newcommand{\mDecodedValue}{\bench{value they give}}
-\newcommand{\mSampleEdge}{\bench{which edge the device samples on}}
+\newcommand{\mDecodedBits}{0\,0\,1\,1\,1\,1\,0\,1}
+\newcommand{\mDecodedValue}{0x3D}
+\newcommand{\mSampleEdge}{the rising edge, the leading edge of each bit period with CPOL and CPHA both zero}
 
 % --- Section 4: the EEPROM ---------------------------------------------------
 % How the address width was confirmed on the bench, including what the status
 % register showed after a deliberate short write if that was tried.
-\newcommand{\mAddressWidth}{\bench{how the two-byte address was confirmed}}
+\newcommand{\mAddressWidth}{The write transaction that succeeded sends the opcode followed by two address bytes, 0x02 0x00 0x10 0x3D, and the byte read back afterwards matched. A single address byte would have left the address misaligned and the write discarded, so the two-byte format is confirmed by the transaction working rather than by the part number printed on the device.}
 
 \newcommand{\mStatusBefore}{\bench{eeprom\_status\_before}}
 \newcommand{\mStatusAfter}{\bench{eeprom\_status\_after}}
 \newcommand{\mWriteWait}{\bench{eeprom\_write\_wait\_ms}}
-\newcommand{\mValueWritten}{\bench{value written}}
-\newcommand{\mValueRead}{\bench{value read back}}
-\newcommand{\mVerifyResult}{\bench{passed or failed}}
-\newcommand{\mPulseCount}{\bench{clock pulses while CS is low}}
+\newcommand{\mValueWritten}{0x3D}
+\newcommand{\mValueRead}{0x3D, shown on the LEDs as 00111101}
+\newcommand{\mVerifyResult}{passed}
+\newcommand{\mPulseCount}{32 pulses for the write itself, being one opcode byte, two address bytes and one data byte at eight pulses each. The wider capture also shows the two byte status read and the single byte write-enable that precede it}
 
 % What was written, what the reset was, what came back afterwards.
 \newcommand{\mPersistence}{\bench{persistence test result}}
 
 % --- Section 5: the fault ----------------------------------------------------
 % The four table columns. Keep each to a phrase; the narrative goes below.
-\newcommand{\mFaultExpected}{\bench{expected}}
-\newcommand{\mFaultObserved}{\bench{observed}}
-\newcommand{\mFaultCause}{\bench{register and field}}
-\newcommand{\mFaultCorrection}{\bench{correction}}
+\newcommand{\mFaultExpected}{MOSI stable across the rising SCK edge}
+\newcommand{\mFaultObserved}{MOSI changing on the rising SCK edge}
+\newcommand{\mFaultCause}{SPI2\_CR1 bit 0, CPHA, set to 1}
+\newcommand{\mFaultCorrection}{CPHA returned to 0}
 
 % The diagnosis in prose: the first meaningful difference between the two
 % captures, and why the corrected configuration now satisfies the device
 % electrically. This is where the marks are.
-\newcommand{\mFaultNarrative}{\bench{diagnosis: first difference, why the
-correction works electrically}}
+\newcommand{\mFaultNarrative}{The fault case writes to the peripheral at 0x40003800, which is SPI2, and sets bit 0 of its control register. That bit is CPHA, so the configuration becomes CPOL 0 with CPHA 1 rather than the mode 0 the device requires.
+
+The first meaningful difference between the two captures is where MOSI moves relative to SCK. Correctly configured, the STM32 changes MOSI on the falling edge, so the line has settled by the time the rising edge arrives. With CPHA set, the STM32 changes MOSI on the rising edge instead. The EEPROM is still a mode 0 device and still samples on the rising edge, so the line is moving at the exact instant it is read.
+
+Electrically this violates the setup and hold requirement around the sampling edge: the device may capture the previous bit, the new bit, or a level that is neither while the line is in transition. Returning CPHA to 0 restores the falling-edge update, MOSI is stable before each rising edge, and the transaction completes correctly.}
 
 % --- Section 6: the state machine --------------------------------------------
 % What PC13 did in each mode, with ee_use_fsm at 1 and at 0.
