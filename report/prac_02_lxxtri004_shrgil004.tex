@@ -279,10 +279,10 @@ driver; the timeout of 50\,ms present in the code is an upper bound against a
 device that never responds, against a datasheet maximum write cycle time of
 5\,ms, and it is recorded separately from a verification failure.
 
-The status register read \mStatusBefore\ before the write and \mStatusAfter\
-after it. The write itself took \mWriteWait, against a datasheet maximum of
-5\,ms. Writing \mValueWritten\ to address 0x10 and reading it back gave
-\mValueRead, so verification \mVerifyResult.
+On the board, writing \mValueWritten\ to address 0x10 and reading it back
+through the same driver gave \mValueRead, so verification \mVerifyResult. The
+returned byte is shown on the eight user LEDs and the green status output is
+asserted.
 
 \scopefig{task4-cs-sck.png}{task4}{A complete EEPROM transaction. CH1 chip
 select, CH2 SCK, showing the number of clock pulses issued while the device is
@@ -291,10 +291,6 @@ selected.}
 The capture shows \mPulseCount\ clock pulses issued while the device is
 selected, which is consistent with one opcode byte, two address bytes and one
 data byte at eight pulses each.
-
-\subsection{Persistence}
-
-\mPersistence
 
 \section{Fault Diagnosis}
 
@@ -436,7 +432,7 @@ for the duration of the write cycle because the processor is inside the status
 polling loop; under the state machine it continues without interruption, and
 PA3 remains responsive throughout.
 
-\mHeartbeat\ \mFsmResult
+\mFsmResult
 
 \begin{thebibliography}{9}
 
