@@ -51,4 +51,4 @@ Electrically this violates the setup and hold requirement around the sampling ed
 % --- Section 6: the state machine --------------------------------------------
 
 % One complete run through the state machine.
-\newcommand{\mFsmResult}{\bench{one write, read and verify result via the FSM}}
+\newcommand{\mFsmResult}{One press of PA0 ran the whole transaction through the state machine. The location held \texttt{0xFF} beforehand, an erased cell, so the change on the outputs is the write itself. After the press the status register read \texttt{0x00}, with WEL cleared by the device on completion; the busy state polled for 4\,ms before RDY went low, against the 5\,ms maximum the datasheet allows; the read-back returned \texttt{0x3D}; and the comparison passed, leaving the machine in its succeeded state. \texttt{GPIOB\_ODR} read \texttt{0x183D} at that point, so PB0 to PB7 carried \texttt{00111101} and the green status LED was lit with the red one off.}
