@@ -42,7 +42,7 @@
 % The diagnosis in prose: the first meaningful difference between the two
 % captures, and why the corrected configuration now satisfies the device
 % electrically. This is where the marks are.
-\newcommand{\mFaultNarrative}{The fault case writes to the peripheral at 0x40003800, which is SPI2, and sets bit 0 of its control register. That bit is CPHA, so the configuration becomes CPOL 0 with CPHA 1 rather than the mode 0 the device requires.
+\newcommand{\mFaultNarrative}{The fault case writes to the peripheral at 0x40003800, which is SPI2, and sets bit 0 of its control register. That bit is CPHA, so the configuration becomes CPOL 0 with CPHA 1 rather than the mode 0 the device requires. The hook clears SPE before it writes the field and restores it afterwards, which is what makes the new mode take effect rather than be ignored on an already enabled peripheral.
 
 The first meaningful difference between the two captures is where MOSI moves relative to SCK. Correctly configured, the STM32 changes MOSI on the falling edge, so the line has settled by the time the rising edge arrives. With CPHA set, the STM32 changes MOSI on the rising edge instead. The EEPROM is still a mode 0 device and still samples on the rising edge, so the line is moving at the exact instant it is read.
 
