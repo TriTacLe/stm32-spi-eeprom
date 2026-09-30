@@ -34,6 +34,21 @@
   \end{figure}%
 }
 
+% Full text width, for a capture a marker has to read values off.
+\newcommand{\scopefigwide}[3]{%
+  \begin{figure*}[tbp]
+  \centering
+  \IfFileExists{figures/#1}{%
+    \includegraphics[width=0.86\textwidth]{figures/#1}%
+  }{%
+    \fbox{\parbox[c][40mm][c]{0.86\textwidth}{\centering
+      \textcolor{red}{\textbf{[BENCH] figures/#1 not captured yet}}}}%
+  }
+  \caption{#3}
+  \label{fig:#2}
+  \end{figure*}%
+}
+
 \input{measurements}
 
 \begin{document}
@@ -218,7 +233,7 @@ not apply and the group test byte is 0x3D, or $00111101_2$.
 
 \subsection{Measured waveform}
 
-\scopefig{task3-sck-mosi.png}{task3}{One complete byte transmitted with the
+\scopefigwide{task3-sck-mosi.png}{task3}{One complete byte transmitted with the
 chip select held high. CH1 SCK, CH2 MOSI.}
 
 Measured from the capture with cursors placed by hand: the clock idles
@@ -291,7 +306,7 @@ through the same driver gave \mValueRead, so verification \mVerifyResult. The
 returned byte is shown on the eight user LEDs and the green status output is
 asserted.
 
-\scopefig{task4-cs-sck.png}{task4}{A complete EEPROM transaction, CH1 chip select
+\scopefigwide{task4-cs-sck.png}{task4}{A complete EEPROM transaction, CH1 chip select
 and CH2 SCK. Left: the write transaction itself, with the chip select low across
 the whole burst. Right: the wider view at 20\,\textmu s per division, showing the
 write-enable and status-read transactions that surround it, each framed by its own
@@ -341,14 +356,20 @@ Expected & Observed & Cause & Correction \\
 \end{tabular}
 \end{table}
 
+Fig.~\ref{fig:fault} places the two captures side by side.
+
 \mFaultNarrative
 
-\scopefig{task5-faulty.png}{faulty}{The faulty case. CH1 SCK, CH2 MOSI,
-channel 1 DC coupled.}
-
-\scopefig{task5-corrected.png}{corrected}{The same measurement after the
-correction, channel 1 AC coupled. The coupling shifts the displayed baseline
-only; the edge positions the diagnosis rests on are unchanged by it.}
+\begin{figure*}[tbp]
+\centering
+\includegraphics[width=0.48\textwidth]{figures/task5-faulty.png}\hfill
+\includegraphics[width=0.48\textwidth]{figures/task5-corrected.png}
+\caption{The same measurement in both builds, CH1 SCK and CH2 MOSI. Left: the
+faulty case, channel 1 DC coupled. Right: after the correction, channel 1 AC
+coupled. The coupling shifts the displayed baseline only; the edge positions the
+diagnosis rests on are unchanged by it.}
+\label{fig:fault}
+\end{figure*}
 
 \section{Non-Blocking FSM}
 
