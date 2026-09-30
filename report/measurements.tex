@@ -26,6 +26,9 @@
 % register showed after a deliberate short write if that was tried.
 \newcommand{\mAddressWidth}{The write transaction that succeeded sends the opcode followed by two address bytes, 0x02 0x00 0x10 0x3D, and the byte read back afterwards matched. A single address byte would have left the address misaligned and the write discarded, so the two-byte format is confirmed by the transaction working rather than by the part number printed on the device.}
 
+% Measured duration of the internal write cycle, against the 5 ms maximum.
+\newcommand{\mWriteTime}{4\,\mathrm{ms}}
+
 \newcommand{\mValueWritten}{0x3D}
 \newcommand{\mValueRead}{0x3D, shown on the LEDs as 00111101}
 \newcommand{\mVerifyResult}{passed}

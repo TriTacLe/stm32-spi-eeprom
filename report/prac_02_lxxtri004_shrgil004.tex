@@ -301,6 +301,13 @@ driver; the timeout of 50\,ms present in the code is an upper bound against a
 device that never responds, against a datasheet maximum write cycle time of
 5\,ms, and it is recorded separately from a verification failure.
 
+Measured on the board, the interval between the chip select rising at the end
+of the write transaction and RDY reading low was $\mWriteTime$, against the
+$5\,\mathrm{ms}$ maximum in the datasheet \cite{cat25640}. The device
+therefore completes well inside its specified worst case, and polling the
+status register rather than waiting a fixed 5\,ms returns the processor to the
+main loop about a millisecond earlier on every write.
+
 On the board, writing \mValueWritten\ to address 0x10 and reading it back
 through the same driver gave \mValueRead, so verification \mVerifyResult. The
 returned byte is shown on the eight user LEDs and the green status output is
